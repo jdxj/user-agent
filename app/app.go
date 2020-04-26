@@ -17,7 +17,7 @@ const headerInfoCacheLimit = 5
 
 func NewCollector() *Collector {
 	coll := &Collector{
-		headerInfos: make([]*module.HeaderInfo, 0, headerInfoCacheLimit),
+		headerInfos: make(chan *module.HeaderInfo, headerInfoCacheLimit),
 	}
 
 	srv := &http.Server{
@@ -32,7 +32,8 @@ func NewCollector() *Collector {
 type Collector struct {
 	srv *http.Server
 
-	headerInfos []*module.HeaderInfo
+	// todo: 锁
+	headerInfos chan *module.HeaderInfo
 }
 
 func (coll *Collector) Start() {
@@ -47,6 +48,8 @@ func (coll *Collector) Start() {
 			panic(err)
 		}
 	}()
+
+	go coll.cacheHeaderInfo()
 }
 
 func (coll *Collector) Stop() {

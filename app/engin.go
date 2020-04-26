@@ -3,6 +3,9 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"strings"
+
+	"github.com/jdxj/user-agent/control"
 
 	"github.com/astaxie/beego/logs"
 
@@ -13,7 +16,9 @@ import (
 
 func (coll *Collector) newEngine() *gin.Engine {
 	r := gin.Default()
-	r.Any("/", coll.RecordHeader)
+	r.Use(coll.RejectFaviconIco)
+	r.Use(coll.RecordHeader)
+	r.Any("/", Ping)
 
 	return r
 }
@@ -29,17 +34,7 @@ func (coll *Collector) RecordHeader(c *gin.Context) {
 		Method:    req.Method,
 		Path:      req.RequestURI,
 	}
-	coll.headerInfos = append(coll.headerInfos, headerInfo)
-
-	if len(coll.headerInfos) >= headerInfoCacheLimit {
-		InsertHeader(coll.headerInfos)
-		coll.headerInfos = coll.headerInfos[:0]
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-		"len":     len(coll.headerInfos),
-	})
+	coll.headerInfos <- headerInfo
 }
 
 func InsertHeader(headerInfos []*module.HeaderInfo) {
@@ -60,5 +55,40 @@ func InsertHeader(headerInfos []*module.HeaderInfo) {
 			logs.Error("data: %#v", *hi)
 			continue
 		}
+	}
+}
+
+func (coll *Collector) cacheHeaderInfo() {
+	headerInfos := make([]*module.HeaderInfo, 0, headerInfoCacheLimit)
+
+	for {
+		select {
+		case <-control.Stop:
+			headerInfos = headerInfos[:0]
+			logs.Debug("stop cache headerInfo")
+			return
+
+		case hi := <-coll.headerInfos:
+			headerInfos = append(headerInfos, hi)
+		}
+
+		if len(headerInfos) >= headerInfoCacheLimit {
+			InsertHeader(headerInfos)
+			headerInfos = headerInfos[:0]
+		}
+	}
+}
+
+func Ping(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}
+
+func (coll *Collector) RejectFaviconIco(c *gin.Context) {
+	path := c.Request.RequestURI
+	if strings.Index(path, "favicon.ico") >= 0 {
+		c.AbortWithStatus(http.StatusNotFound)
+		logs.Debug("abort favicon, request url: %s", path)
 	}
 }
