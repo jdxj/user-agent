@@ -16,8 +16,13 @@ import (
 
 func (coll *Collector) newEngine() *gin.Engine {
 	r := gin.Default()
+
+	// middleware
 	r.Use(coll.RejectFaviconIco)
+	r.Use(coll.RejectEmptyUserAgent)
 	r.Use(coll.RecordHeader)
+
+	// handler
 	r.Any("/", Ping)
 	r.Any("/index.html", Ping)
 	r.Any("/smb_scheduler/cdr.htm", Ping)
@@ -121,5 +126,13 @@ func (coll *Collector) RejectFaviconIco(c *gin.Context) {
 	if strings.Index(path, "favicon.ico") >= 0 {
 		c.AbortWithStatus(http.StatusNotFound)
 		logs.Debug("abort favicon, request url: %s", path)
+	}
+}
+
+func (coll *Collector) RejectEmptyUserAgent(c *gin.Context) {
+	if c.GetHeader("User-Agent") == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"message": "must user-agent",
+		})
 	}
 }
