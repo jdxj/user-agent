@@ -14,6 +14,7 @@ import (
 )
 
 const headerInfoCacheLimit = 5
+const address = ":80"
 
 func NewCollector() *Collector {
 	coll := &Collector{
@@ -21,7 +22,7 @@ func NewCollector() *Collector {
 	}
 
 	srv := &http.Server{
-		Addr:    ":80",
+		Addr:    address,
 		Handler: coll.newEngine(),
 	}
 	coll.srv = srv

@@ -24,37 +24,7 @@ func (coll *Collector) newEngine() *gin.Engine {
 
 	// handler
 	r.Any("/", Ping)
-	r.Any("/index.html", Ping)
-	r.Any("/smb_scheduler/cdr.htm", Ping)
-	r.Any("/goip/cron.htm", Ping)
-	r.Any("/navigation.html", Ping)
-	r.Any("/KingViewWeb", Ping)
-	r.Any("/webconfig.ini", Ping)
-	r.Any("/echo.php", Ping)
-	r.Any("/cgi-bin/mainfunction.cgi", Ping)
-	r.Any("/xsser.php", Ping)
-	r.Any("/forums/index.php", Ping)
-	r.Any("/bbs/index.php", Ping)
-	r.Any("/license.php", Ping)
-	r.Any("/v/index.php", Ping)
-	r.Any("/s/index.php", Ping)
-	r.Any("/1/index.php", Ping)
-	r.Any("/adv,/cgi-bin/weblogin.cgi", Ping)
-	r.Any("/nice%20ports%2C/Tri%6Eity.txt%2ebak", Ping)
-	r.Any("/sdk", Ping)
-	r.Any("/nmaplowercheck1587934706", Ping)
-	r.Any("/evox/about", Ping)
-	r.Any("/HNAP1", Ping)
-	r.Any("/index.php", Ping)
-	r.Any("/manager/text/list", Ping)
-	r.Any("/sqlite/main.php", Ping)
-	r.Any("/sqlitemanager/main.php", Ping)
-	r.Any("/SQLiteManager/main.php", Ping)
-	r.Any("/SQLite/main.php", Ping)
-	r.Any("/main.php", Ping)
-	r.Any("/test/sqlite/SQLiteManager-1.2.0/SQLiteManager-1.2.0/main.php", Ping)
-	r.Any("/SQLiteManager-1.2.4/main.php", Ping)
-	r.Any("/agSearch/SQlite/main.php", Ping)
+	r.Any("/:id", Ping)
 
 	return r
 }
@@ -74,6 +44,10 @@ func (coll *Collector) RecordHeader(c *gin.Context) {
 }
 
 func InsertHeader(headerInfos []*module.HeaderInfo) {
+	if len(headerInfos) <= 0 {
+		return
+	}
+
 	mysql := db.MySQL
 
 	query := fmt.Sprintf("INSERT INTO request (ip,host,referer,user_agent,method,path) VALUES (?,?,?,?,?,?)")
@@ -98,19 +72,22 @@ func (coll *Collector) cacheHeaderInfo() {
 	headerInfos := make([]*module.HeaderInfo, 0, headerInfoCacheLimit)
 
 	for {
+		var toFlash bool
 		select {
 		case <-control.Stop:
-			headerInfos = headerInfos[:0]
-			logs.Debug("stop cache headerInfo")
-			return
+			toFlash = true
 
 		case hi := <-coll.headerInfos:
 			headerInfos = append(headerInfos, hi)
 		}
 
-		if len(headerInfos) >= headerInfoCacheLimit {
+		if len(headerInfos) >= headerInfoCacheLimit || toFlash {
 			InsertHeader(headerInfos)
 			headerInfos = headerInfos[:0]
+		}
+		if toFlash {
+			logs.Debug("stop cache headerInfo")
+			break
 		}
 	}
 }
