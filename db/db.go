@@ -16,8 +16,8 @@ const pingDur = 5 * time.Minute
 var MySQL = newMySQL()
 
 func newMySQL() *sql.DB {
-	// todo: 隐藏密码
-	dsn := "root:mima@tcp(127.0.0.1:49160)/http?loc=Local&parseTime=true"
+	dsn := ":@tcp(127.0.0.1:49160)/http?loc=Local&parseTime=true"
+	//dsn := ":@@tcp(mysql.aaronkir.xyz:49160)/http?loc=Local&parseTime=true"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		panic(err)

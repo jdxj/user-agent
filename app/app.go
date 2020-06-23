@@ -14,7 +14,7 @@ import (
 )
 
 const headerInfoCacheLimit = 5
-const address = ":80"
+const address = ":8080"
 
 func NewCollector() *Collector {
 	coll := &Collector{

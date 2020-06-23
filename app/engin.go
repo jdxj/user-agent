@@ -20,6 +20,8 @@ func (coll *Collector) newEngine() *gin.Engine {
 	// middleware
 	r.Use(coll.RejectFaviconIco)
 	r.Use(coll.RejectEmptyUserAgent)
+
+	// 记录 User-Agent
 	r.Use(coll.RecordHeader)
 
 	// handler
